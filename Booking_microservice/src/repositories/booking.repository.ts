@@ -4,6 +4,7 @@ import { validate as isValidUUID } from "uuid";
 import { BadRequestError, NotFoundError } from "../utils/errors/app.error";
 
 export async function createBooking(bookingInput: Prisma.BookingCreateInput) {
+    // console.log(bookingInput);
     const booking = await prismaClient.booking.create({
         data: bookingInput
     });
@@ -22,6 +23,8 @@ export async function createIdempotencyKey(key: string, bookingId: number) {
             }
         }
     })
+    // console.log("HIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII")
+    // console.log(idempotencyKey)
     return idempotencyKey;
 }
 

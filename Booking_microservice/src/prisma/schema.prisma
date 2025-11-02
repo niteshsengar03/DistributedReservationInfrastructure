@@ -17,6 +17,9 @@ model Booking {
   id              Int             @id @default(autoincrement())
   userId          Int
   hotelId         Int
+  checkInDate     DateTime
+  checkOutDate    DateTime
+  roomCategoryId Int
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   bookingAmount   Int
