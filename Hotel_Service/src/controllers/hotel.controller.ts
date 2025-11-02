@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { createHotelService, getAllHotelsService, getHotelByIdService, softDeleteHotelService, updateHotelService } from "../service/hotel.service";
-import { number } from "zod";
 
 export async function createHotelHandler(req:Request,res:Response){
  
@@ -9,7 +8,7 @@ export async function createHotelHandler(req:Request,res:Response){
      res.status(200).json({
         hotel:hotel
      })
-    
+     
 }
 
 export async function getHotelByIdHandler(req:Request,res:Response){

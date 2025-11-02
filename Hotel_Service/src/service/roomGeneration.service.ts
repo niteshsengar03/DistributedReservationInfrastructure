@@ -28,32 +28,46 @@ export async function generateRooms(jobData: RoomGenerationJob) {
   const totalDays = Math.ceil(
     (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
   );
-  logger.info(`Generating rooms for ${totalDays}`)
+  logger.info(`Generating rooms for ${totalDays} days`);
   const batchSize = jobData.batchSize || 100;
 
-  const currentDate = new Date(startDate);
+  let currentDate = new Date(startDate);
 
   while (currentDate <= endDate) {
+    // create batch end as inclusive last day of batch
     const batchEndDate = new Date(currentDate);
+    batchEndDate.setDate(batchEndDate.getDate() + batchSize - 1);
 
-    batchEndDate.setDate(batchEndDate.getDate() + batchSize);
-
+    // if batch end exceeds overall endDate, cap it to endDate
     if (batchEndDate > endDate) {
-      batchEndDate.setDate(endDate.getTime());
+      // assign a copy of endDate to avoid setDate misuse
+      batchEndDate.setTime(endDate.getTime());
     }
+
+    logger.info(
+      `Processing batch from ${currentDate.toISOString().split("T")[0]} to ${batchEndDate
+        .toISOString()
+        .split("T")[0]}`
+    );
 
     const batchResult = await processDateBatch(
       roomCategory,
-      currentDate,
-      batchEndDate,
+      new Date(currentDate),
+      new Date(batchEndDate),
       jobData.priceOverride
     );
 
     totalRoomsCreated += batchResult.roomCreated;
     totalDatesProcessed += batchResult.dateProcessed;
 
-    currentDate.setTime(batchEndDate.getTime());
+    // advance currentDate to the day after batchEndDate
+    currentDate = new Date(batchEndDate);
+    currentDate.setDate(currentDate.getDate() + 1);
   }
+
+  logger.info(
+    `Room generation completed. roomsCreated=${totalRoomsCreated} datesProcessed=${totalDatesProcessed}`
+  );
 
   return {
     totalRoomsCreated,
@@ -62,7 +76,7 @@ export async function generateRooms(jobData: RoomGenerationJob) {
 }
 // process date in batches
 export async function processDateBatch(
-  roomCategory: room_categories,
+roomCategory: room_categories,
   startDate: Date,
   endDate: Date,
   priceOverride?: number
@@ -71,14 +85,11 @@ export async function processDateBatch(
   let dateProcessed = 0;
   const roomsToCreate: Prisma.roomsCreateManyInput[] = [];
   const currentDate = new Date(startDate);
-  // N+1 querry problem
-  // quering n number of times calling db
-  // instead use sql query
-  //kind of select * from roomCategory where id = ? and dateOfavailability in [?,?,?] <- array of dates
+
   while (currentDate <= endDate) {
     const existingRoom = await findByRoomCategoryIdAndDate(
       roomCategory.id,
-      currentDate
+      new Date(currentDate)
     );
 
     if (!existingRoom) {
@@ -94,8 +105,15 @@ export async function processDateBatch(
     dateProcessed++;
   }
 
-  if (roomsToCreate.length > 0) await bulkCreate(roomsToCreate);
-  roomCreated += roomsToCreate.length;
+  logger.info(
+    `Batch result: toCreate=${roomsToCreate.length} for category=${roomCategory.id}`
+  );
+
+  if (roomsToCreate.length > 0) {
+    await bulkCreate(roomsToCreate);
+    roomCreated += roomsToCreate.length;
+    logger.info(`Inserted ${roomsToCreate.length} rooms`);
+  }
 
   return {
     roomCreated,

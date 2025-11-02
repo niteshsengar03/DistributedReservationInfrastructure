@@ -7,6 +7,7 @@ import logger from "./config/logger.config";
 import { attachCorrelationIdMiddleware } from "./middlewares/correlation.middleware";
 import { testConnection } from "./prisma/client";
 import { setupRoomGererationWorker } from "./processors/roomGernation.processors";
+import { startScheduler } from "./scheduler/roomScheduler";
 
 // const app = express(); // implicit
 const app: Express = express(); // explcit
@@ -33,6 +34,7 @@ const startServer = async () => {
       logger.info(`Server is running on http://localhost:${serverConfig.PORT}`);
       logger.info(`Press Ctrl+C to exit`, { server: "dev server" });
        setupRoomGererationWorker();
+       startScheduler();
     });
   } catch (error) {
     logger.error("Failed to start server:", error);

@@ -72,3 +72,39 @@ export async function findByRoomCategoryIdAndDate(
 export async function bulkCreate(rooms:Prisma.roomsCreateManyInput[]){
   return await prisma.rooms.createMany({data:rooms})
 }
+
+export async function findLatestDateByRoomCategoryId(roomCategoryId: number) {
+  const room = await prisma.rooms.findFirst({
+    where: {
+      room_category_id: roomCategoryId,
+      deleted_at: null,
+    },
+    orderBy: {
+      date_of_availability: 'desc'
+    },
+    select: {
+      date_of_availability: true
+    }
+  });
+  return room?.date_of_availability;
+}
+
+
+export async function findLatestDatesForAllCategories() {
+  const groups = await prisma.rooms.groupBy({
+    by: ["room_category_id"],
+    where: {
+      deleted_at: null,
+    },
+    _max: {
+      date_of_availability: true,
+    },
+  });
+
+  return groups
+    .filter(g => g._max.date_of_availability !== null)   // remove null rows
+    .map(g => ({
+      roomCategoryId: g.room_category_id,
+      latestDate: new Date(g._max.date_of_availability!)  // guaranteed non-null
+    }));
+}
